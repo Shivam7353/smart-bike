@@ -1,0 +1,222 @@
+
+#include <LiquidCrystal.h>
+LiquidCrystal lcd(4, 12, 5, 6, 7, 8);//RS,EN,D4,D5,D6,D7
+#include "HX711.h"
+
+#define calibration_factor -13050.000 //This value is obtained using the SparkFun_HX711_Calibration sketch
+
+#define DOUT  3
+#define CLK  2
+
+HX711 scale;
+
+
+//pin dicleration
+const int analogInPin = A2;     // Analog input pin that recieve alk sensor value
+const int ir =  10;            //  input pin for IR sensor
+const int motor =  9;         //   output pin for motor on and off
+const int load =  A5;         //    output pin for indication of load sensor
+const int hlm =  A4;         //     output pin for indication of helmet sensor 
+const int alk =  A3;        //      output pin for indication of alckohal sensor
+
+// variables will change:
+int irvalue = 0; 
+float a;
+int sensorValue = 0; 
+int b=0;
+int i=0;
+
+
+
+void setup() 
+{
+
+    //lcd initialize
+    lcd.begin(16, 2);
+    lcd.setCursor(0, 0); // top left
+    lcd.print("   WELCOME IN      ");
+    lcd.setCursor(0, 1);
+    lcd.print("VEHICLE SECURITY     ");
+    //serial initialize
+    Serial.begin(9600);
+    //Serial.println("HX711 scale demo");
+    
+    //loadcell initialize
+    scale.begin(DOUT, CLK);
+    scale.set_scale(calibration_factor); //This value is obtained by using the SparkFun_HX711_Calibration sketch
+    scale.tare(); //Assuming there is no weight on the scale at start up, reset the scale to 0
+    //Serial.println("Readings:");
+
+    //I/O pins
+    pinMode(ir, INPUT); 
+    pinMode(motor, OUTPUT);      
+    pinMode(alk, OUTPUT);
+    pinMode(load, OUTPUT);  
+    pinMode(hlm, OUTPUT);
+
+    digitalWrite(alk, LOW);
+    digitalWrite(load, LOW);
+    digitalWrite(hlm, LOW);
+    
+    
+    delay(2000);
+    lcd.clear();
+    
+   
+ }
+
+void loop() 
+{
+  // read the analog in value:
+  //Serial.print("Reading: ");
+  sensorValue = analogRead(analogInPin);  
+  irvalue = digitalRead(ir);
+  a= scale.get_units();
+  a=a/10;
+  Serial.print(a); //scale.get_units() returns a float
+  Serial.print(" kg"); //You can change this to kg but you'll need to refactor the calibration_factor
+  Serial.println();
+  Serial.println(sensorValue);
+
+  lcd.setCursor(0, 0); // top left
+  lcd.print("load :");
+  lcd.setCursor(6, 0);
+  lcd.print(a);
+   lcd.setCursor(11, 0); // top left
+  lcd.print("kg");
+/*
+  lcd.setCursor(0, 1); // top left
+  lcd.print("alk  :");
+  lcd.setCursor(6, 1);
+  lcd.print(sensorValue);*/
+
+  
+  
+
+  while(a>=1)
+  {
+
+  while(1)
+  {
+                // read the analog in value:
+              Serial.print("Reading: ");
+              sensorValue = analogRead(analogInPin);  
+              irvalue = digitalRead(ir);
+              a= scale.get_units();
+              a=a/10;
+              lcd.setCursor(0, 0); // top left
+              lcd.print("load :                     ");
+              lcd.setCursor(6, 0);
+              lcd.print(a);
+              lcd.setCursor(11, 0); // top left
+              lcd.print("kg");
+
+              
+        //helmet sensor oparation................................
+             if (irvalue == HIGH) 
+             {
+              //digitalWrite(motor, HIGH);  
+              digitalWrite(hlm, LOW); 
+             } 
+             else 
+             {
+              //digitalWrite(motor, LOW); 
+              digitalWrite(hlm,HIGH); 
+             }
+          
+         //load sensor oparation.........................
+            if(a>b && i<3)
+              {
+                i++;
+                Serial.println(i);
+                delay(1000);
+                b=b+a;
+                /*
+                lcd.setCursor(0, 1); // top left
+                lcd.print("psn:");
+                lcd.setCursor(5, 1); // top left
+                lcd.print(i);
+
+                lcd.setCursor(7, 1); // top left
+                lcd.print("W:");
+                lcd.setCursor(9, 1); // top left
+                lcd.print(b);*/
+              }
+
+              if(i>=3 || sensorValue>360 || irvalue == LOW)
+              { Serial.println(" motor off ");
+                digitalWrite(motor, LOW); 
+                lcd.setCursor(6, 1); // top left
+                lcd.print(" MOTOR OFF"); 
+                delay(2000);
+              }
+              else
+              { Serial.println(" motor on ");
+                digitalWrite(motor, HIGH); 
+                lcd.setCursor(6, 1); // top left
+                lcd.print(" MOTOR ON   ");
+                
+                
+              }
+
+              //alckohal sensor oparation..........................   
+            if(sensorValue>360)
+            {Serial.println("30% ALCOHAL ");
+             digitalWrite(alk,HIGH);  
+               lcd.setCursor(0, 1); // top left
+                lcd.print("30% A");
+                delay(2000);
+                
+            }
+            else
+            if(sensorValue>280)
+            {Serial.println("20% ALCOHAL ");
+             //digitalWrite(alk,HIGH);  
+             digitalWrite(alk,LOW); 
+             lcd.setCursor(0, 1); // top left
+                lcd.print("20% A");
+                delay(2000);
+            }
+            else
+            if(sensorValue>200)
+            {Serial.println("10% A");
+            //digitalWrite(alk,HIGH);  
+            digitalWrite(alk,LOW); 
+            lcd.setCursor(0, 1); // top left
+                lcd.print("20% A");
+            delay(2000);
+            }
+            else
+            {Serial.println("00% ALCOHAL ");
+             digitalWrite(alk,LOW); 
+            lcd.setCursor(0, 1); // top left
+                lcd.print("00% A");
+                delay(2000);
+            }
+
+
+            if(i<3)
+            {
+              digitalWrite(load, LOW);
+            }else
+            {
+              digitalWrite(load,HIGH); 
+            }
+               
+              
+
+          
+            
+         
+          
+        
+          
+           delay(2000);
+            //lcd.clear();  
+                
+     }
+  }
+                           
+}
+
+
